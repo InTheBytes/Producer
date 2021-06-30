@@ -9,6 +9,7 @@ import uuid
 import re
 import os
 import io
+import json
 
 
 def random_time(start, end):
@@ -36,7 +37,8 @@ def make_user(role_id, first_name, last_name):
     email = first_name + '.' + last_name + '@example.com'
     phone = random.randint(1000000000, 9999999999)
     active = 1
-    return {'user_id': user_id,
+    return {'table_name': 'user',
+            'user_id': user_id,
             'user_role': role_id,
             'username': username,
             'password': password,
@@ -51,7 +53,8 @@ def make_confirmation(user_id, is_active):
     token_id = uuid.uuid4()
     confirmation_token = uuid.uuid4()
     created_date = random_time(pd.to_datetime('2021-01-01'), pd.to_datetime('2021-02-01'))
-    return {'token_id': token_id,
+    return {'table_name': 'confirmation',
+            'token_id': token_id,
             'user_id': user_id,
             'confirmation_token': confirmation_token,
             'created_date': created_date,
@@ -62,7 +65,8 @@ def make_driver(user_id):
     driver_id = uuid.uuid4()
     vehicle_id = uuid.uuid4()
     financial_id = uuid.uuid4()
-    return {'driver_id': driver_id,
+    return {'table_name': 'driver',
+            'driver_id': driver_id,
             'user_id': user_id,
             'vehicle_id': vehicle_id,
             'financial_id': financial_id,
@@ -76,7 +80,8 @@ def make_payment(user_id, first_name, last_name):
     expiration = random_time(pd.to_datetime('2022-01-01'), pd.to_datetime('2023-12-31'))
     account_num = str(random.randint(1000000000000000, 9999999999999999))
     code = str(random.randint(100, 999))
-    return {'payment_id': payment_id,
+    return {'table_name': 'payment',
+            'payment_id': payment_id,
             'user_id': user_id,
             'method': method,
             'nickname': nickname,
@@ -91,7 +96,8 @@ def make_restaurant(location_id, name):
     cuisine = random.choice(['Fast Food', 'Chicken', 'Burgers', 'Sandwiches', 'Desserts', 'Breakfast', 'Chinese',
                              'Italian', 'Mexican', 'Pizza', 'Soup', 'Seafood', 'Barbecue', 'Japanese'])
     name = re.sub(' +', ' ', name)
-    return {'restaurant_id': restaurant_id,
+    return {'table_name': 'restaurant',
+            'restaurant_id': restaurant_id,
             'location_id': location_id,
             'name': string.capwords(name, ' '),
             'cuisine': cuisine.title()}
@@ -109,7 +115,8 @@ def make_location(restaurant_d=None, address_d=None):
     unit = full_address[-1]
     street = ' '.join(full_address[:-1])
 
-    return {'location_id': location_id,
+    return {'table_name': 'location',
+            'location_id': location_id,
             'street': street.title(),
             'unit': unit.title(),
             'city': 'Baltimore',
@@ -129,7 +136,8 @@ def make_food(restaurant_id, food_d):
         min_val = 2
         max_val = 20
     price = random.randint(min_val, max_val) - 0.01
-    return {'food_id': food_id,
+    return {'table_name': 'food',
+            'food_id': food_id,
             'restaurant_id': restaurant_id,
             'name': name.title(),
             'price': price,
@@ -137,7 +145,8 @@ def make_food(restaurant_id, food_d):
 
 
 def make_manager(user_id, restaurant_id):
-    return {'user_id': user_id,
+    return {'table_name': 'manager',
+            'user_id': user_id,
             'restaurant_id': restaurant_id}
 
 
@@ -145,7 +154,8 @@ def make_order(start_time, user_id, restaurant_id, location_id):
     order_id = uuid.uuid4()
     window_start = start_time + datetime.timedelta(minutes=random.randint(35, 60))
     window_end = window_start + datetime.timedelta(minutes=20)
-    return {'order_id': order_id,
+    return {'table_name': 'order',
+            'order_id': order_id,
             'user_id': user_id,
             'restaurant_id': restaurant_id,
             'destination_id': location_id,
@@ -160,7 +170,8 @@ def make_delivery(driver_id, order_id, start_time):
     r_0 = random.randint(5, 15)
     r_1 = random.randint(r_0 + 10, r_0 + 25)
     r_2 = random.randint(r_1 + 10, r_1 + 35)
-    return {'delivery_id': delivery_id,
+    return {'table_name': 'delivery',
+            'delivery_id': delivery_id,
             'order_id': order_id,
             'driver_id': driver_id,
             'start_time': start_time + datetime.timedelta(minutes=r_0),
@@ -170,22 +181,10 @@ def make_delivery(driver_id, order_id, start_time):
 
 def make_order_food(order_id, food_id):
     arr = list(map(lambda x: int(round(((0.1 * x) ** 2) + 5, 0)), list(range(1, 10))))
-    return {'order_id': order_id,
+    return {'table_name': 'order_food',
+            'order_id': order_id,
             'food_id': food_id,
             'quantity': random.choice(arr)}
-
-
-def order_food(order_id, food_d):
-    of_out = []
-    price = 0
-    arr = list(map(lambda x: int(round(((0.1 * x) ** 2) + 1, 0)), list(range(1, 20))))
-    for i in range(random.choice(arr)):
-        this_food = food_d.sample()
-        this_of = make_order_food(order_id, list(this_food['food_id'])[0])
-        food_d = food_d.drop(index=this_food.index, axis=0)
-        price += list(this_food['price'])[0] * this_of['quantity']
-        of_out.append(this_of)
-    return of_out, round(price, 2)
 
 
 def make_transaction(payment_id, order_id, subtotal, start_time):
@@ -196,7 +195,8 @@ def make_transaction(payment_id, order_id, subtotal, start_time):
     tip_percentage = random.choice([0, 0.05, 0.1, 0.15, 0.2, 0.25])
     tip = round(subtotal * tip_percentage, 2)
     total = subtotal + tax + fee - discount + tip
-    return {'transaction_id': transaction_id,
+    return {'table_name': 'transaction',
+            'transaction_id': transaction_id,
             'payment_id': payment_id,
             'order_id': order_id,
             'subtotal': subtotal,
@@ -219,6 +219,7 @@ class Producer:
 
     def stream_batch(self, data):
         if self.stream:
+            data = json.dumps(data).encode('utf-8')
             self.kinesis_client.put_records(StreamName=os.environ['kinesis_stream'], Records=data)
 
     def get_s3_data(self, object_name):
@@ -247,13 +248,15 @@ class Producer:
         role = 1
         for role_name in self.n_roles:
             for i in range(self.n_roles[role_name]):
-                stream_out.append(
-                    make_user(role, random.choice(first_names).title(), random.choice(last_names).title()))
+                this_user = make_user(role, random.choice(first_names).title(), random.choice(last_names).title())
+                stream_out.append(this_user)
+                this_user.pop('table_name', None)
+                user_out.append(this_user)
                 if len(stream_out) == BATCH_SIZE or i == self.n_roles[role_name] - 1:
                     self.stream_batch(stream_out)
-                    user_out += stream_out
                     stream_out = []
             role += 1
+
         user_out = pd.DataFrame(user_out)
         self.put_s3_data(user_out, 'user_data.csv')
         return user_out
@@ -262,10 +265,12 @@ class Producer:
         conf_out = []
         stream_out = []
         for user in user_d.iterrows():
-            stream_out.append(make_confirmation(user[1]['user_id'], user[1]['active']))
+            this_confirmation = make_confirmation(user[1]['user_id'], user[1]['active'])
+            stream_out.append(this_confirmation)
+            this_confirmation.pop('table_name', None)
+            conf_out.append(this_confirmation)
             if len(stream_out) == BATCH_SIZE or user == user_d.iloc[-1]:
                 self.stream_batch(stream_out)
-                conf_out += stream_out
                 stream_out = []
 
         self.put_s3_data(pd.DataFrame(conf_out), 'confirmation_data.csv')
@@ -274,10 +279,12 @@ class Producer:
         driver_out = []
         stream_out = []
         for user in user_d.iterrows():
-            stream_out.append(make_driver(user[1]['user_id']))
+            this_driver = make_driver(user[1]['user_id'])
+            stream_out.append(this_driver)
+            this_driver.pop('table_name', None)
+            driver_out.append(this_driver)
             if len(stream_out) == BATCH_SIZE or user == user_d.iloc[-1]:
                 self.stream_batch(stream_out)
-                driver_out += stream_out
                 stream_out = []
 
         driver_out = pd.DataFrame(driver_out)
@@ -288,11 +295,14 @@ class Producer:
         payment_out = []
         stream_out = []
         for user in user_d.iterrows():
-            stream_out.append(make_payment(user[1]['user_id'], user[1]['first_name'], user[1]['last_name']))
+            this_payment = make_payment(user[1]['user_id'], user[1]['first_name'], user[1]['last_name'])
+            stream_out.append(this_payment)
+            this_payment.pop('table_name', None)
+            payment_out.append(this_payment)
             if len(stream_out) == BATCH_SIZE or user == user_d.iloc[-1]:
                 self.stream_batch(stream_out)
-                payment_out += stream_out
                 stream_out = []
+
         return pd.DataFrame(payment_out)
 
     def locs_restaurants(self):
@@ -305,18 +315,21 @@ class Producer:
             if i < self.n_roles['customer']:
                 this_address = address_data.sample()
                 this_location = make_location(address_d=this_address)
-                location_out.append(this_location)
                 stream_out.append(this_location)
+                this_location.pop('table_name', None)
+                location_out.append(this_location)
                 address_data = address_data.drop(labels=this_address.index, axis=0)
             else:
                 this_address = restaurant_data.sample()
                 this_location = make_location(restaurant_d=this_address)
-                location_out.append(this_location)
                 stream_out.append(this_location)
+                this_location.pop('table_name', None)
+                location_out.append(this_location)
 
                 this_restaurant = make_restaurant(this_location['location_id'], list(this_address['name'])[0])
-                restaurant_out.append(this_restaurant)
                 stream_out.append(this_restaurant)
+                this_restaurant.pop('table_name', None)
+                restaurant_out.append(this_restaurant)
                 restaurant_data = restaurant_data.drop(labels=this_address.index, axis=0)
 
             if len(stream_out) == BATCH_SIZE or i + 1 == self.n_roles['customer'] + N_RESTAURANTS:
@@ -336,12 +349,14 @@ class Producer:
         stream_out = []
         for restaurant in restaurant_d.iterrows():
             for i in range(random.randint(18, 50)):
-                this_food = food_names.sample()
-                stream_out.append(make_food(restaurant[1]['restaurant_id'], this_food))
+                this_food = make_food(restaurant[1]['restaurant_id'], food_names.sample())
+                stream_out.append(this_food)
+                this_food.pop('table_name', None)
+                food_out.append(this_food)
                 if len(stream_out) == BATCH_SIZE or restaurant == restaurant_d.iloc[-1]:
                     self.stream_batch(stream_out)
-                    food_out += stream_out
                     stream_out = []
+
         food_out = pd.DataFrame(food_out)
         self.put_s3_data(food_out, 'food_data.csv')
         return food_out
@@ -350,14 +365,31 @@ class Producer:
         manager_out = []
         stream_out = []
         for user in user_d.iterrows():
-            restaurant = restaurant_d.sample()
-            stream_out.append(make_manager(user[1]['user_id'], list(restaurant['restaurant_id'])[0]))
+            this_manager = make_manager(user[1]['user_id'], list(restaurant_d.sample()['restaurant_id'])[0])
+            stream_out.append(this_manager)
+            this_manager.pop('table_name', None)
+            manager_out.append(this_manager)
             if len(stream_out) == BATCH_SIZE or user == user_d.iloc[-1]:
                 self.stream_batch(stream_out)
-                manager_out += stream_out
                 stream_out = []
 
         self.put_s3_data(pd.DataFrame(manager_out), 'manager_data.csv')
+
+    def order_food(self, order_id, food_d):
+        of_out = []
+        stream_out = []
+        price = 0
+        arr = list(map(lambda x: int(round(((0.1 * x) ** 2) + 1, 0)), list(range(1, 20))))
+        for i in range(random.choice(arr)):
+            this_food = food_d.sample()
+            this_of = make_order_food(order_id, list(this_food['food_id'])[0])
+            stream_out.append(this_of)
+            this_of.pop('table_name', None)
+            of_out.append(this_of)
+            food_d = food_d.drop(index=this_food.index, axis=0)
+            price += list(this_food['price'])[0] * this_of['quantity']
+        self.stream_batch(stream_out)
+        return of_out, round(price, 2)
 
     # Creates orders, transactions, deliveries
     # Given customer user, driver user, restaurant, customer location, customer payment, and food data
@@ -379,6 +411,7 @@ class Producer:
             location_d = location_d.drop(labels=this_location.index, axis=0)
             this_order = make_order(payment_time, u_id, r_id, l_id)
             stream_out.append(this_order)
+            this_order.pop('table_name', None)
             order_out.append(this_order)
             o_id = this_order['order_id']
 
@@ -386,18 +419,19 @@ class Producer:
             d_id = list(driver_d.sample()['driver_id'])[0]
             this_delivery = make_delivery(d_id, o_id, payment_time)
             stream_out.append(this_delivery)
+            this_delivery.pop('table_name', None)
             delivery_out.append(this_delivery)
 
             # Creates the cart for this order, with random food based upon the restaurant
             this_food_d = food_d[food_d['restaurant_id'] == r_id]
             this_order_food, subtotal = self.order_food(o_id, this_food_d)
-            stream_out += this_order_food
             order_food_out += this_order_food
 
             # Creates the transaction with the user's payment information, subtotal based upon food cart
             p_id = list(payment_d[payment_d['user_id'] == u_id]['payment_id'])[0]
             this_transaction = make_transaction(p_id, o_id, subtotal, payment_time)
             stream_out.append(this_transaction)
+            this_transaction.pop('table_name', None)
             transaction_out.append(this_transaction)
 
             if len(stream_out) >= BATCH_SIZE or user == customer_d.iloc[-1]:
